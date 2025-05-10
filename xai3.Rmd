@@ -1,0 +1,80 @@
+---
+title: "XAI3 - Partial Dependency Plots"
+output: html_document
+---
+
+# Ejercicio 1: One Dimensional Partial Dependence Plot - Bike Rentals
+
+```{r, message=FALSE, warning=FALSE}
+# Cargar librerías
+library(randomForest)
+library(pdp)
+library(ggplot2)
+library(readr)
+
+# Cargar datos
+bikes <- read_csv("day_cleaned_full.csv")
+
+# Ajustar modelo de random forest
+set.seed(123)
+rf_model <- randomForest(cnt ~ ., data = bikes, ntree = 200, importance = TRUE)
+
+# PDP para variables seleccionadas
+features <- c("days_since_2011", "temp", "hum", "windspeed")
+
+# Graficar PDPs
+par(mfrow = c(2,2))
+for (feature in features) {
+  pd <- partial(rf_model, pred.var = feature, train = bikes)
+  plot(pd, main = paste("PDP for", feature), xlab = feature, ylab = "Predicted count")
+}
+
+```
+
+# Ejercicio 2: Bidimensional Partial Dependence Plot - Humidity & Temperature
+
+```{r}
+# Muestreo aleatorio
+set.seed(42)
+bikes_sample <- bikes[sample(nrow(bikes), 300), ]
+
+# Entrenar modelo con muestra
+rf_model_2d <- randomForest(cnt ~ ., data = bikes_sample, ntree = 200)
+
+# PDP bidimensional
+pdp_2d <- partial(rf_model_2d, pred.var = c("hum", "temp"), grid.resolution = 20)
+
+# Visualización con ggplot2
+ggplot(pdp_2d, aes(x = hum, y = temp, fill = yhat)) +
+  geom_tile(width = 0.03, height = 0.03) +
+  scale_fill_viridis_c() +
+  labs(title = "2D PDP: Humidity & Temperature", x = "Humidity", y = "Temperature", fill = "Bike Count") +
+  theme_minimal()
+```
+
+# Ejercicio 3: PDP para predicción del precio de casas
+
+```{r}
+# Cargar datos de casas
+house <- read_csv("kc_house_data.csv")
+
+# Selección de variables relevantes
+house_subset <- house[, c("price", "bedrooms", "bathrooms", "sqft_living", "sqft_lot", "floors", "yr_built")]
+
+# Muestreo aleatorio
+set.seed(42)
+house_sample <- house_subset[sample(nrow(house_subset), 500), ]
+
+# Ajustar modelo
+rf_house <- randomForest(price ~ ., data = house_sample, ntree = 200)
+
+# PDPs para variables clave
+variables <- c("bedrooms", "bathrooms", "sqft_living", "floors")
+
+# Graficar PDPs
+par(mfrow = c(2,2))
+for (var in variables) {
+  pd <- partial(rf_house, pred.var = var, train = house_sample)
+  plot(pd, main = paste("PDP for", var), xlab = var, ylab = "Predicted price")
+}
+```
